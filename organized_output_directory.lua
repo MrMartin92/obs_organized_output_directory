@@ -147,8 +147,10 @@ local function move_file(src, dst)
 end
 
 local function sanitize_path_string(path)
-    local clean_path = string.gsub(path, "[<>:\\/\"|?*]", "")
-    return clean_path
+    path = string.gsub(path, "^ +", "") -- Remove leading whitespaces
+    path = string.gsub(path, " +$", "") -- Remove trailing whitespaces
+    path = string.gsub(path, "[<>:\\/\"|?*]", "") -- Remove illigal path characters for Windows
+    return path
 end
 
 local function screenshot_event()
