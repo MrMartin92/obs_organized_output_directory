@@ -8,11 +8,18 @@ local GITHUB_AUTHOR_URL = "https://github.com/MrMartin92"
 local TWITCH_AUTHOR_URL = "https://twitch.tv/MrMartin_"
 local KOFI_URL = "https://ko-fi.com/MrMartin_"
 
+local name_source_enum = {
+    ["Window Title"] = 0,
+    ["Process Name"] = 1
+}
+
 local DEFAULT_SCREENSHOT_SUB_DIR = "screenshots"
 local DEFAULT_REPLAY_SUB_DIR = "replays"
+local DEFAULT_NAME_SOURCE = name_source_enum["Window Title"]
 
 local cfg_screenshot_sub_dir
 local cfg_replay_sub_dir
+local cfg_name_source
 
 local obs = obslua
 
@@ -36,6 +43,11 @@ function script_properties()
     obs.obs_properties_add_text(props, "SCREENSHOT_SUB_DIR", "Screenshot directory name", obs.OBS_TEXT_DEFAULT)
     obs.obs_properties_add_text(props, "REPLAY_SUB_DIR", "Replay directory name", obs.OBS_TEXT_DEFAULT)
 
+    local props_name_source = obs.obs_properties_add_list(props, "NAME_SOURCE", "Name source", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_INT)
+    for name, value in pairs(name_source_enum) do
+        obs.obs_property_list_add_int(props_name_source, name, value)
+    end
+
     return props
 end
 
@@ -44,6 +56,7 @@ function script_update(settings)
 
     cfg_screenshot_sub_dir = obs.obs_data_get_string(settings, "SCREENSHOT_SUB_DIR")
     cfg_replay_sub_dir = obs.obs_data_get_string(settings, "REPLAY_SUB_DIR")
+    cfg_name_source = obs.obs_data_get_int(settings, "NAME_SOURCE")
 end
 
 function script_defaults(settings)
@@ -51,6 +64,7 @@ function script_defaults(settings)
 
     obs.obs_data_set_default_string(settings, "SCREENSHOT_SUB_DIR", DEFAULT_SCREENSHOT_SUB_DIR)
     obs.obs_data_set_default_string(settings, "REPLAY_SUB_DIR", DEFAULT_REPLAY_SUB_DIR)
+    obs.obs_data_set_default_int(settings, "NAME_SOURCE", DEFAULT_NAME_SOURCE)
 end
 
 local function get_filename(path)
@@ -112,7 +126,12 @@ local function get_game_name()
         print("\tWindow title: " .. title)
     end
 
-    return executable, title, class
+    
+    if cfg_name_source == name_source_enum["Process Name"] then
+        return executable
+    end
+
+    return title
 end
 
 local function move_file(src, dst)
@@ -131,7 +150,8 @@ local function screenshot_event(event)
     print("screenshot_event()")
 
     local file_path = obs.obs_frontend_get_last_screenshot()
-    local _, game_name = get_game_name()
+    local game_name = get_game_name()
+
     local new_file_path = get_base_path(file_path) .. sanitize_path_string(game_name) .. "/" .. sanitize_path_string(cfg_screenshot_sub_dir) .. "/".. get_filename(file_path)
 
     move_file(file_path, new_file_path)
@@ -141,7 +161,7 @@ local function replay_event(event)
     print("replay_event()")
 
     local file_path = obs.obs_frontend_get_last_replay()
-    local _, game_name = get_game_name()
+    local game_name = get_game_name()
     local new_file_path = get_base_path(file_path) .. sanitize_path_string(game_name) .. "/" .. sanitize_path_string(cfg_replay_sub_dir) .. "/".. get_filename(file_path)
 
     move_file(file_path, new_file_path)
