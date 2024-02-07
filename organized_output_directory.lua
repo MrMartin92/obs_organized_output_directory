@@ -185,8 +185,4 @@ end
 function script_load(settings)
     print("script_load()")
     obs.obs_frontend_add_event_callback(event_dispatch)
-
-    local test = "   THE FINA?LS    "
-    print("\"" .. sanitize_path_string(test) .. "\"")
-
 end
