@@ -10,7 +10,7 @@ The top active source is then used to determine the name of the subdirectory fro
 
 # Known Issues / Planned Features
 - Some kind of rule/wildcard/match system would be useful.<p>
-Some games/apps like Minecraft are a little tricky. The window title contains the current game version like "Minecraft 1.20.4" and the process name is something like "javaw.exe". With a rule/wildcard/match system, we could change the name and remove the version from the window title, for example.
+Some games/apps like Minecraft are a little tricky. The window title contains the current game version like `Minecraft 1.20.4` and the process name is something like `javaw.exe`. With a rule/wildcard/match system, we could change the name and remove the version from the window title, for example.
 
 - Currently only Windows is supported. I would like to get the script running on Linux and MacOS as well.
 
