@@ -8,8 +8,11 @@ local GITHUB_AUTHOR_URL = "https://github.com/MrMartin92"
 local TWITCH_AUTHOR_URL = "https://twitch.tv/MrMartin_"
 local KOFI_URL = "https://ko-fi.com/MrMartin_"
 
-local SCREENSHOT_SUB_DIR = "screenshots"
-local REPLAY_SUB_DIR = "replays"
+local DEFAULT_SCREENSHOT_SUB_DIR = "screenshots"
+local DEFAULT_REPLAY_SUB_DIR = "replays"
+
+local cfg_screenshot_sub_dir
+local cfg_replay_sub_dir
 
 local obs = obslua
 
@@ -20,23 +23,46 @@ function script_description()
     To do this, it searches for Window Capture or Game Capture sources in the current scene. \z
     The top active source is then used to determine the name of the subdirectory from the window title or the process name.<p>\z
     You found a bug or you have a feature request? Great! <a href=\"" .. GITHUB_PROJECT_BUG_TRACKER_URL .. "\">Open an issue on GitHub.</a><p>\z
+    ♥️ If you wish, you can support me on <a href=\"" .. KOFI_URL .. "\">Ko-fi</a>. Thank you! 🤗<p>\z
     <b>🚀 Version:</b> " .. VERSION_STRING .. "<br>\z
     <b>🧑‍💻 Author:</b> Tobias Lorenz <a href=\"" .. GITHUB_AUTHOR_URL .. "\">[GitHub]</a> <a href=\"" .. TWITCH_AUTHOR_URL .. "\">[Twitch]</a><br>\z
     <b>🔬 Source:</b> <a href=\"" .. GITHUB_PROJECT_URL .. "\">GitHub.com</a><br>\z
-    <b>🧾 Licence:</b> <a href=\"" .. GITHUB_PROJECT_LICENCE_URL .. "\">MIT</a><p>\z
-    ♥️ If you wish, you can support me on <a href=\"" .. KOFI_URL .. "\">Ko-fi</a>. Thank you! 🤗"
+    <b>🧾 Licence:</b> <a href=\"" .. GITHUB_PROJECT_LICENCE_URL .. "\">MIT</a>"
 end
 
-function get_filename(path)
+function script_properties()
+    local props = obs.obs_properties_create()
+
+    obs.obs_properties_add_text(props, "SCREENSHOT_SUB_DIR", "Screenshot directory name", obs.OBS_TEXT_DEFAULT)
+    obs.obs_properties_add_text(props, "REPLAY_SUB_DIR", "Replay directory name", obs.OBS_TEXT_DEFAULT)
+
+    return props
+end
+
+function script_update(settings)
+    print("script_update()")
+
+    cfg_screenshot_sub_dir = obs.obs_data_get_string(settings, "SCREENSHOT_SUB_DIR")
+    cfg_replay_sub_dir = obs.obs_data_get_string(settings, "REPLAY_SUB_DIR")
+end
+
+function script_defaults(settings)
+    print("script_defaults()")
+
+    obs.obs_data_set_default_string(settings, "SCREENSHOT_SUB_DIR", DEFAULT_SCREENSHOT_SUB_DIR)
+    obs.obs_data_set_default_string(settings, "REPLAY_SUB_DIR", DEFAULT_REPLAY_SUB_DIR)
+end
+
+local function get_filename(path)
     return string.match(path, "[^/]*$")
 end
 
-function get_base_path(path)
+local function get_base_path(path)
     local filename_length = #get_filename(path)
     return string.sub(path, 0, -1 - filename_length)
 end
 
-function get_source_hook_infos(source)
+local function get_source_hook_infos(source)
 	local cd = obs.calldata_create()
 	local proc = obs.obs_source_get_proc_handler(source)
 
@@ -50,7 +76,7 @@ function get_source_hook_infos(source)
 	return executable, title, class
 end
 
-function get_game_name()
+local function get_game_name()
     print("get_game_name()")
 
     local executable, title, class
@@ -89,39 +115,39 @@ function get_game_name()
     return executable, title, class
 end
 
-function move_file(src, dst)
+local function move_file(src, dst)
     obs.os_mkdirs(get_base_path(dst))
     if not obs.os_file_exists(dst) then
         obs.os_rename(src, dst)
     end
 end
 
-function screenshot_event(event)
-    print("screenshot_event()")
-
-    local file_path = obs.obs_frontend_get_last_screenshot()
-    local _, game_name = get_game_name()
-    local new_file_path = get_base_path(file_path) .. sanitize_path_string(game_name) .. "/" .. sanitize_path_string(SCREENSHOT_SUB_DIR) .. "/".. get_filename(file_path)
-
-    move_file(file_path, new_file_path)
-end
-
-function sanitize_path_string(path)
+local function sanitize_path_string(path)
     local clean_path = string.gsub(path, "[<>:\\/\"|?*]", "")
     return clean_path
 end
 
-function replay_event(event)
-    print("replay_event()")
+local function screenshot_event(event)
+    print("screenshot_event()")
 
-    local file_path = obs.obs_frontend_get_last_replay()
+    local file_path = obs.obs_frontend_get_last_screenshot()
     local _, game_name = get_game_name()
-    local new_file_path = get_base_path(file_path) .. sanitize_path_string(game_name) .. "/" .. sanitize_path_string(REPLAY_SUB_DIR) .. "/".. get_filename(file_path)
+    local new_file_path = get_base_path(file_path) .. sanitize_path_string(game_name) .. "/" .. sanitize_path_string(cfg_screenshot_sub_dir) .. "/".. get_filename(file_path)
 
     move_file(file_path, new_file_path)
 end
 
-function event_dispatch(event)
+local function replay_event(event)
+    print("replay_event()")
+
+    local file_path = obs.obs_frontend_get_last_replay()
+    local _, game_name = get_game_name()
+    local new_file_path = get_base_path(file_path) .. sanitize_path_string(game_name) .. "/" .. sanitize_path_string(cfg_replay_sub_dir) .. "/".. get_filename(file_path)
+
+    move_file(file_path, new_file_path)
+end
+
+local function event_dispatch(event)
     if event == obs.OBS_FRONTEND_EVENT_SCREENSHOT_TAKEN then
         screenshot_event()
     elseif event == obs.OBS_FRONTEND_EVENT_REPLAY_BUFFER_SAVED then
