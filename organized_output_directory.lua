@@ -147,8 +147,10 @@ local function move_file(src, dst)
 end
 
 local function sanitize_path_string(path)
-    local clean_path = string.gsub(path, "[<>:\\/\"|?*]", "")
-    return clean_path
+    path = string.gsub(path, "^ +", "") -- Remove leading whitespaces
+    path = string.gsub(path, " +$", "") -- Remove trailing whitespaces
+    path = string.gsub(path, "[<>:\\/\"|?*]", "") -- Remove illigal path characters for Windows
+    return path
 end
 
 local function screenshot_event()
@@ -183,4 +185,8 @@ end
 function script_load(settings)
     print("script_load()")
     obs.obs_frontend_add_event_callback(event_dispatch)
+
+    local test = "   THE FINA?LS    "
+    print("\"" .. sanitize_path_string(test) .. "\"")
+
 end
