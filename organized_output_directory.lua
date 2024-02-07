@@ -135,9 +135,14 @@ local function get_game_name()
 end
 
 local function move_file(src, dst)
+    print("move_file()")
+    print("\t Src: " .. src)
+    print("\t Dst: " .. dst)
     obs.os_mkdirs(get_base_path(dst))
     if not obs.os_file_exists(dst) then
         obs.os_rename(src, dst)
+    else
+        print("File aready exist at the destination! So we don't move the file!")
     end
 end
 
@@ -146,7 +151,7 @@ local function sanitize_path_string(path)
     return clean_path
 end
 
-local function screenshot_event(event)
+local function screenshot_event()
     print("screenshot_event()")
 
     local file_path = obs.obs_frontend_get_last_screenshot()
@@ -157,7 +162,7 @@ local function screenshot_event(event)
     move_file(file_path, new_file_path)
 end
 
-local function replay_event(event)
+local function replay_event()
     print("replay_event()")
 
     local file_path = obs.obs_frontend_get_last_replay()
