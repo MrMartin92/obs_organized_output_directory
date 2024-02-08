@@ -1,5 +1,5 @@
 local SCRIPT_NAME = "Organized Output Directory"
-local VERSION_STRING = "1.0.0"
+local VERSION_STRING = "1.0.1"
 
 local GITHUB_PROJECT_URL = "https://github.com/MrMartin92/obs_organized_output_directory"
 local GITHUB_PROJECT_LICENCE_URL = "https://raw.githubusercontent.com/MrMartin92/obs_organized_output_directory/main/LICENSE"
@@ -28,7 +28,7 @@ function script_description()
     With \"" .. SCRIPT_NAME .. "\" you can create order in your output directory. \z
     The script automatically creates subdirectories for each game in the output directory. \z
     To do this, it searches for Window Capture or Game Capture sources in the current scene. \z
-    The top active source is then used to determine the name of the subdirectory from the window title or the process name.<p>\z
+    The last active and hooked source is then used to determine the name of the subdirectory from the window title or the process name.<p>\z
     You found a bug or you have a feature request? Great! <a href=\"" .. GITHUB_PROJECT_BUG_TRACKER_URL .. "\">Open an issue on GitHub.</a><p>\z
     ♥️ If you wish, you can support me on <a href=\"" .. KOFI_URL .. "\">Ko-fi</a>. Thank you! 🤗<p>\z
     <b>🚀 Version:</b> " .. VERSION_STRING .. "<br>\z
@@ -81,52 +81,45 @@ local function get_source_hook_infos(source)
 	local proc = obs.obs_source_get_proc_handler(source)
 
 	obs.proc_handler_call(proc, "get_hooked", cd)
+    local hooked = obs.calldata_bool(cd, "hooked")
 	local executable = obs.calldata_string(cd, "executable")
 	local title = obs.calldata_string(cd, "title")
-	local class = obs.calldata_string(cd, "class")
 
 	obs.calldata_destroy(cd)
 
-	return executable, title, class
+	return executable, title, hooked
+end
+
+local function search_for_capture_source_and_get_data()
+    local process_name, window_name
+    local sources = obs.obs_enum_sources()
+
+    for _, source in ipairs(sources) do
+        if obs.obs_source_active(source) then
+            local tmp_process_name, tmp_window_title, tmp_hooked = get_source_hook_infos(source)
+    
+            if tmp_hooked then
+                process_name = tmp_process_name
+                window_name = tmp_window_title
+            end
+        end
+    end
+
+    return process_name, window_name
 end
 
 local function get_game_name()
     print("get_game_name()")
 
-    local executable, title, class
-
-    local cur_scene = obs.obs_frontend_get_current_scene()
-    local cur_scene_source = obs.obs_scene_from_source(cur_scene)
-    local scene_items = obs.obs_scene_enum_items(cur_scene_source)
-
-    for index, scene_item in ipairs(scene_items) do
-        local source = obs.obs_sceneitem_get_source(scene_item)
-        if obs.obs_source_active(source) then
-            local tmp_exe, tmp_title, tmp_class = get_source_hook_infos(source)
-            if (tmp_exe ~= nil) and (tmp_exe ~= "") then
-                executable = tmp_exe
-                title = tmp_title
-                class = tmp_class
-            end
-        end
-    end
-
-    obs.sceneitem_list_release(scene_items)
-    obs.obs_scene_release(cur_scene_source)
-
-    print("Detected Game:")
+    local executable, title = search_for_capture_source_and_get_data()
 
     if executable ~= nil then
         print("\tExecutable: " .. executable)
-    end
-    if class ~= nil then
-        print("\tApp class: " .. class)
     end
     if title ~= nil then
         print("\tWindow title: " .. title)
     end
 
-    
     if cfg_name_source == name_source_enum["Process Name"] then
         return executable
     end
@@ -147,8 +140,10 @@ local function move_file(src, dst)
 end
 
 local function sanitize_path_string(path)
-    local clean_path = string.gsub(path, "[<>:\\/\"|?*]", "")
-    return clean_path
+    path = string.gsub(path, "^ +", "") -- Remove leading whitespaces
+    path = string.gsub(path, " +$", "") -- Remove trailing whitespaces
+    path = string.gsub(path, "[<>:\\/\"|?*]", "") -- Remove illigal path characters for Windows
+    return path
 end
 
 local function screenshot_event()
@@ -156,6 +151,10 @@ local function screenshot_event()
 
     local file_path = obs.obs_frontend_get_last_screenshot()
     local game_name = get_game_name()
+
+    if game_name == nil then
+        return
+    end
 
     local new_file_path = get_base_path(file_path) .. sanitize_path_string(game_name) .. "/" .. sanitize_path_string(cfg_screenshot_sub_dir) .. "/".. get_filename(file_path)
 
@@ -167,6 +166,11 @@ local function replay_event()
 
     local file_path = obs.obs_frontend_get_last_replay()
     local game_name = get_game_name()
+
+    if game_name == nil then
+        return
+    end
+
     local new_file_path = get_base_path(file_path) .. sanitize_path_string(game_name) .. "/" .. sanitize_path_string(cfg_replay_sub_dir) .. "/".. get_filename(file_path)
 
     move_file(file_path, new_file_path)
