@@ -1,5 +1,5 @@
 local SCRIPT_NAME = "Organized Output Directory"
-local VERSION_STRING = "1.0.0"
+local VERSION_STRING = "1.0.1"
 
 local GITHUB_PROJECT_URL = "https://github.com/MrMartin92/obs_organized_output_directory"
 local GITHUB_PROJECT_LICENCE_URL = "https://raw.githubusercontent.com/MrMartin92/obs_organized_output_directory/main/LICENSE"
