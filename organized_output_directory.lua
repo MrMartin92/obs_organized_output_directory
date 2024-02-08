@@ -81,52 +81,47 @@ local function get_source_hook_infos(source)
 	local proc = obs.obs_source_get_proc_handler(source)
 
 	obs.proc_handler_call(proc, "get_hooked", cd)
+    local hooked = obs.calldata_bool(cd, "hooked")
 	local executable = obs.calldata_string(cd, "executable")
 	local title = obs.calldata_string(cd, "title")
-	local class = obs.calldata_string(cd, "class")
 
 	obs.calldata_destroy(cd)
 
-	return executable, title, class
+	return executable, title, hooked
+end
+
+local function search_for_capture_source_and_get_data()
+    local process_name, window_name
+    local sources = obs.obs_enum_sources()
+
+    for _, source in ipairs(sources) do
+        if obs.obs_source_active(source) then
+            local tmp_process_name, tmp_window_title, tmp_hooked = get_source_hook_infos(source)
+    
+            if tmp_hooked then
+                process_name = tmp_process_name
+                window_name = tmp_window_title
+            end
+        end
+    end
+
+    return process_name, window_name
 end
 
 local function get_game_name()
     print("get_game_name()")
 
-    local executable, title, class
-
-    local cur_scene = obs.obs_frontend_get_current_scene()
-    local cur_scene_source = obs.obs_scene_from_source(cur_scene)
-    local scene_items = obs.obs_scene_enum_items(cur_scene_source)
-
-    for index, scene_item in ipairs(scene_items) do
-        local source = obs.obs_sceneitem_get_source(scene_item)
-        if obs.obs_source_active(source) then
-            local tmp_exe, tmp_title, tmp_class = get_source_hook_infos(source)
-            if (tmp_exe ~= nil) and (tmp_exe ~= "") then
-                executable = tmp_exe
-                title = tmp_title
-                class = tmp_class
-            end
-        end
-    end
-
-    obs.sceneitem_list_release(scene_items)
-    obs.obs_scene_release(cur_scene_source)
+    local executable, title = search_for_capture_source_and_get_data()
 
     print("Detected Game:")
 
     if executable ~= nil then
         print("\tExecutable: " .. executable)
     end
-    if class ~= nil then
-        print("\tApp class: " .. class)
-    end
     if title ~= nil then
         print("\tWindow title: " .. title)
     end
 
-    
     if cfg_name_source == name_source_enum["Process Name"] then
         return executable
     end
