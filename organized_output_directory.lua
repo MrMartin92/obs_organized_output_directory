@@ -28,7 +28,7 @@ function script_description()
     With \"" .. SCRIPT_NAME .. "\" you can create order in your output directory. \z
     The script automatically creates subdirectories for each game in the output directory. \z
     To do this, it searches for Window Capture or Game Capture sources in the current scene. \z
-    The top active source is then used to determine the name of the subdirectory from the window title or the process name.<p>\z
+    The last active and hooked source is then used to determine the name of the subdirectory from the window title or the process name.<p>\z
     You found a bug or you have a feature request? Great! <a href=\"" .. GITHUB_PROJECT_BUG_TRACKER_URL .. "\">Open an issue on GitHub.</a><p>\z
     ♥️ If you wish, you can support me on <a href=\"" .. KOFI_URL .. "\">Ko-fi</a>. Thank you! 🤗<p>\z
     <b>🚀 Version:</b> " .. VERSION_STRING .. "<br>\z
@@ -113,8 +113,6 @@ local function get_game_name()
 
     local executable, title = search_for_capture_source_and_get_data()
 
-    print("Detected Game:")
-
     if executable ~= nil then
         print("\tExecutable: " .. executable)
     end
@@ -154,6 +152,10 @@ local function screenshot_event()
     local file_path = obs.obs_frontend_get_last_screenshot()
     local game_name = get_game_name()
 
+    if game_name == nil then
+        return
+    end
+
     local new_file_path = get_base_path(file_path) .. sanitize_path_string(game_name) .. "/" .. sanitize_path_string(cfg_screenshot_sub_dir) .. "/".. get_filename(file_path)
 
     move_file(file_path, new_file_path)
@@ -164,6 +166,11 @@ local function replay_event()
 
     local file_path = obs.obs_frontend_get_last_replay()
     local game_name = get_game_name()
+
+    if game_name == nil then
+        return
+    end
+
     local new_file_path = get_base_path(file_path) .. sanitize_path_string(game_name) .. "/" .. sanitize_path_string(cfg_replay_sub_dir) .. "/".. get_filename(file_path)
 
     move_file(file_path, new_file_path)
